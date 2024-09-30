@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\Folder;
 use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 
 class TaskController extends Controller
@@ -21,16 +22,20 @@ class TaskController extends Controller
      */
     public function  index(Folder $folder)
     {
-        /** @var App\Models\User **/
-        $user = auth()->user();
-        $folders = $user->folders()->get();
-        $tasks = $folder->tasks()->get();
+        try {
+            /** @var App\Models\User **/
+            $user = auth()->user();
+            $folders = $user->folders()->get();
+            $tasks = $folder->tasks()->get();
 
-        return view('tasks/index', [
-            'folders' => $folders,
-            'folder_id' => $folder->id,
-            'tasks' => $tasks
-        ]);
+            return view('tasks/index', [
+                'folders' => $folders,
+                'folder_id' => $folder->id,
+                'tasks' => $tasks
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error TaskController in index: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -42,12 +47,16 @@ class TaskController extends Controller
      */
     public function showCreateForm(Folder $folder)
     {
-        /** @var App\Models\User **/
-        $user = Auth::user();
-        $folder = $user->folders()->findOrFail($folder->id);
-        return view('tasks/create', [
-            'folder_id' => $folder->id,
-        ]);
+        try {
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            $folder = $user->folders()->findOrFail($folder->id);
+            return view('tasks/create', [
+                'folder_id' => $folder->id,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error TaskController in showCreateForm: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -60,20 +69,24 @@ class TaskController extends Controller
      */
     public function create(Folder $folder, CreateTask $request)
     {
-        /** @var App\Models\User **/
-        $user = Auth::user();
-        $folder = $user->folders()->findOrFail($folder->id);
+        try {
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            $folder = $user->folders()->findOrFail($folder->id);
 
 
-        $task = new Task();
-        $task->title = $request->title;
-        $task->due_date = $request->due_date;
-        $folder->tasks()->save($task);
+            $task = new Task();
+            $task->title = $request->title;
+            $task->due_date = $request->due_date;
+            $folder->tasks()->save($task);
 
-        /* タスク一覧ページにリダイレクトする */
-        return redirect()->route('tasks.index', [
-            'folder' => $folder->id,
-        ]);
+            /* タスク一覧ページにリダイレクトする */
+            return redirect()->route('tasks.index', [
+                'folder' => $folder->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error TaskController in create: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -88,15 +101,22 @@ class TaskController extends Controller
      */
     public function showEditForm(Folder $folder, Task $task)
     {
-        /** @var App\Models\User **/
-        $user = Auth::user();
-        $folder = $user->folders()->findOrFail($folder->id);
+        try {
+            // フォルダーとタスクのリレーション（関連性）をチェックする
+            $this->checkRelation($folder, $task);
 
-        return view('tasks/edit', [
-            'folder' => $folder,
-            'task' => $task,
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            $task = $folder->tasks()->findOrFail($task->id);
 
-        ]);
+            return view('tasks/edit', [
+                'folder' => $folder,
+                'task' => $task,
+
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error TaskController in showEditForm: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -111,20 +131,26 @@ class TaskController extends Controller
      */
     public function edit(EditTask $request, Folder $folder, Task $task)
     {
-        /** @var App\Models\User **/
-        // $user = Auth::user();
-        // $folder = $user->folders()->findOrFail($folder->id);
-        // $task = $folder->tasks()->findOrFail($task->id);
+        try {
+            /** @var App\Models\User **/
+            // $user = Auth::user();
+            // $folder = $user->folders()->findOrFail($folder->id);
+            // $task = $folder->tasks()->findOrFail($task->id);
 
+            // フォルダーとタスクのリレーション（関連性）をチェックする
+            $this->checkRelation($folder, $task);
 
-        $task->title = $request->title;
-        $task->status = $request->status;
-        $task->due_date = $request->due_date;
-        $task->save();
+            $task->title = $request->title;
+            $task->status = $request->status;
+            $task->due_date = $request->due_date;
+            $task->save();
 
-        return redirect()->route('tasks.index', [
-            'folder' => $task->folder_id,
-        ]);
+            return redirect()->route('tasks.index', [
+                'folder' => $task->folder_id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error TaskController in edit: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -138,14 +164,21 @@ class TaskController extends Controller
      */
     public function showDeleteForm(Folder $folder, Task $task)
     {
-        /** @var App\Models\User **/
-        $user = Auth::user();
-        $folder = $user->folders()->findOrFail($folder->id);
-        // $task = $folder->find($task->id);
+        try {
+            // フォルダーとタスクのリレーション（関連性）をチェックする
+            $this->checkRelation($folder, $task);
 
-        return view('tasks/delete', [
-            'task' => $task,
-        ]);
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            $folder = $user->folders()->findOrFail($folder->id);
+            // $task = $folder->find($task->id);
+
+            return view('tasks/delete', [
+                'task' => $task,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error TaskController in showDeleteForm: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -158,14 +191,33 @@ class TaskController extends Controller
      */
     public function delete(Folder $folder, Task $task)
     {
-        /** @var App\Models\User **/
-        // $user = Auth::user();
-        // $folder = $user->folders()->findOrFail($folder->id);
-        // $task = $folder->find($task->id);
-        $task->delete();
+        try {
+            /** @var App\Models\User **/
+            // $user = Auth::user();
+            // $folder = $user->folders()->findOrFail($folder->id);
+            // $task = $folder->find($task->id);
 
-        return redirect()->route('tasks.index', [
-            'folder' => $task->folder_id,
-        ]);
+            // フォルダーとタスクのリレーション（関連性）をチェックする
+            $this->checkRelation($folder, $task);
+
+            $task->delete();
+
+            return redirect()->route('tasks.index', [
+                'folder' => $task->folder_id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error TaskController in delete: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * [フォルダーとタスクのリレーション（関連性）をチェックする]
+     */
+    private function checkRelation(Folder $folder, Task $task)
+    {
+        /* フォルダとタスクのプロパティが一致するか確認する */
+        if ($folder->id !== $task->folder_id) {
+            abort(404);
+        }
     }
 }

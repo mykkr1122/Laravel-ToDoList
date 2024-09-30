@@ -16,3 +16,7 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# phpmyAdmin/sessions を無視
+phpmyadmin/
+phpmyadmin/sessions/

@@ -18,9 +18,10 @@ Route::group(['middleware' => 'auth'], function () {
     /* home page */
     Route::get('/', [HomeController::class, "index"])->name('home');
 
-    /* index page */
-    Route::get("/folders/{folder}/tasks", [TaskController::class, "index"])->name("tasks.index");
-
+    Route::group(['middleware' => 'can:view,folder'], function () {
+        /* index page */
+        Route::get("/folders/{folder}/tasks", [TaskController::class, "index"])->name("tasks.index");
+    });
     /* folders new create page */
     Route::get('/folders/create', [FolderController::class, "showCreateForm"])->name('folders.create');
     Route::post('/folders/create', [FolderController::class, "create"]);

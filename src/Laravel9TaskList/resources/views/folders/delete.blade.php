@@ -25,7 +25,7 @@
                         </ul>
                     </div>
                     @endif
-                    <form action="{{ route('folders.delete', ['folder' => $task->folder_id]) }}" method="post">
+                    <form action="{{ route('folders.delete', ['folder' => $folder_id]) }}" method="post">
                         @csrf
                         <div class="form-group">
                             <label for="title">フォルダ名</label>
@@ -33,7 +33,7 @@
                         </div>
                         <p>上記の項目を削除しようとしています。本当によろしいでしょうか？</p>
                         <div class="text-right">
-                            <button type="button" class="btn btn-primary" onclick="window.location='{{ route('tasks.index', ['folder' => $task->folder_id]) }}'">キャンセル</button>
+                            <button type="button" class="btn btn-primary" onclick="window.location='{{ route('tasks.index', ['folder' => $folder_id]) }}'">キャンセル</button>
                             <button type="submit" class="btn btn-primary">削除</button>
                         </div>
                     </form>

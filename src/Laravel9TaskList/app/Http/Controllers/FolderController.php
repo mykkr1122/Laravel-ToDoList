@@ -7,6 +7,7 @@ use App\Models\Folder;
 use App\Http\Requests\CreateFolder;
 use App\Http\Requests\EditFolder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class FolderController extends Controller
 {
@@ -18,9 +19,15 @@ class FolderController extends Controller
      */
     public function showCreateForm()
     {
-        // ログインユーザーに紐づくフォルダだけを取得
-        $folders = Auth::user()->folders;
-        return view('folders/create', compact('folders'));
+        try {
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            $user->folders;
+
+            return view('folders/create');
+        } catch (\Throwable $e) {
+            Log::error('Error FolderController in showCreateForm: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -32,17 +39,21 @@ class FolderController extends Controller
      */
     public function create(CreateFolder $request)
     {
-        $folder = new Folder();
-        $folder->title = $request->title;
+        try {
+            $folder = new Folder();
+            $folder->title = $request->title;
 
-        // （ログイン）ユーザーに紐づけて保存する
-        /** @var App\Models\User **/
-        $user = Auth::user();
-        $user->folders()->save($folder);
+            // （ログイン）ユーザーに紐づけて保存する
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            $user->folders()->save($folder);
 
-        return redirect()->route('tasks.index', [
-            'folder' => $folder->id,
-        ]);
+            return redirect()->route('tasks.index', [
+                'folder' => $folder->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error FolderController in create: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -66,15 +77,19 @@ class FolderController extends Controller
      */
     public function showEditForm(Folder $folder)
     {
-        /** @var App\Models\User **/
-        $user = Auth::user();
-        // フォルダが存在するかどうかと、ユーザーがそのフォルダの所有者であるかを確認する
-        $folder = $user->folders()->findOrFail($folder->id);
+        try {
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            // フォルダが存在するかどうかと、ユーザーがそのフォルダの所有者であるかを確認する
+            $folder = $user->folders()->findOrFail($folder->id);
 
-        return view('folders/edit', [
-            'folder_id' => $folder->id,
-            'folder_title' => $folder->title,
-        ]);
+            return view('folders/edit', [
+                'folder_id' => $folder->id,
+                'folder_title' => $folder->title,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error FolderController in showEditForm: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -87,16 +102,20 @@ class FolderController extends Controller
      */
     public function edit(Folder $folder, EditFolder $request)
     {
-        /** @var App\Models\User **/
-        $user = Auth::user();
-        $folder = $user->folders()->findOrFail($folder->id);
+        try {
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            $folder = $user->folders()->findOrFail($folder->id);
 
-        $folder->title = $request->title;
-        $folder->save();
+            $folder->title = $request->title;
+            $folder->save();
 
-        return redirect()->route('tasks.index', [
-            'folder' => $folder->id,
-        ]);
+            return redirect()->route('tasks.index', [
+                'folder' => $folder->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error FolderController in edit: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -109,14 +128,18 @@ class FolderController extends Controller
      */
     public function showDeleteForm(Folder $folder)
     {
-        /** @var App\Models\User **/
-        $user = Auth::user();
-        $folder = $user->folders()->findOrFail($folder->id);
+        try {
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            $folder = $user->folders()->findOrFail($folder->id);
 
-        return view('folders/delete', [
-            'folder_id' => $folder->id,
-            'folder_title' => $folder->title,
-        ]);
+            return view('folders/delete', [
+                'folder_id' => $folder->id,
+                'folder_title' => $folder->title,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error FolderController in showDeleteForm: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -129,19 +152,29 @@ class FolderController extends Controller
      */
     public function delete(Folder $folder)
     {
-        /** @var App\Models\User **/
-        $user = Auth::user();
-        $folder = $user->folders()->findOrFail($folder->id);
+        try {
+            /** @var App\Models\User **/
+            $user = Auth::user();
+            $folder = $user->folders()->findOrFail($folder->id);
 
-        // フォルダデータ内のタスクを削除
-        $folder->tasks()->delete();
-        $folder->delete();
+            // フォルダデータ内のタスクを削除
+            $folder->tasks()->delete();
+            $folder->delete();
 
-        // フォルダの最初のIDを取得（削除してIDの入れ替わりが発生するため）
-        $folder = Folder::first();
+            // ログインしているユーザーの最初のフォルダを取得
+            $firstFolder = $user->folders()->first();
 
-        return redirect()->route('tasks.index', [
-            'folder' => $folder->id,
-        ]);
+            // フォルダが存在する場合、そのフォルダにリダイレクト
+            if ($firstFolder) {
+                return redirect()->route('tasks.index', [
+                    'folder' => $firstFolder->id,
+                ]);
+            }
+
+            // もしフォルダが無くなった場合はフォルダ作成ページに遷移
+            return redirect()->route('folders.create');
+        } catch (\Exception $e) {
+            Log::error('Error FolderController in delete: ' . $e->getMessage());
+        }
     }
 }
